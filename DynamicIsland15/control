@@ -1,0 +1,9 @@
+Package: com.local.dynamicisland15
+Name: DynamicIsland15
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Simulated Dynamic Island for iOS 15 (e.g. iPhone 6s). Not the real system island — drawn by hooking SpringBoard.
+Maintainer: Local
+Author: Local
+Section: Tweaks
+Depends: mobilesubstrate

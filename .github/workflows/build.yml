@@ -1,0 +1,49 @@
+name: Build DynamicIsland15
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Theos and SDK
+        run: |
+          set -e
+          # 安装 Theos
+          export THEOS=~/theos
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          # 安装 iOS 15.5 SDK（用于 iOS 15.8.8 兼容）
+          curl -L https://github.com/xybp888/iOS-SDKs/releases/download/1/iOS15.5.sdk.tar.xz -o /tmp/sdk.tar.xz
+          mkdir -p $THEOS/sdks
+          tar -xf /tmp/sdk.tar.xz -C $THEOS/sdks
+          ls $THEOS/sdks
+          # 安装 ldid（签名工具）
+          brew install ldid
+          # 安装 dpkg（打包 deb）
+          brew install dpkg
+
+      - name: Build
+        run: |
+          export THEOS=~/theos
+          cd DynamicIsland15
+          make clean package FINALPACKAGE=1
+          # 把产物整理出来
+          mkdir -p ../artifacts
+          cp -v ../com.local.dynamicisland15_*_iphoneos-arm*.deb ../artifacts/ || cp -v ./packages/com.local.dynamicisland15_*_iphoneos-arm*.deb ../artifacts/ 2>/dev/null || true
+          ls -la ../artifacts/
+
+      - name: Upload deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DynamicIsland15-deb
+          path: |
+            artifacts/*.deb
+            DynamicIsland15/packages/*.deb
+          if-no-files-found: error
