@@ -55,6 +55,26 @@ jobs:
             bash "$THEOS/bin/sdk-install.sh" 15.5 || bash "$THEOS/bin/sdk.sh" --download 15.5 || true
           fi
 
+          # 确保 Theos 能找到标准名 iPhoneOS15.5.sdk（不同来源 SDK 文件名不一样）
+          FOUND=""
+          for d in "$THEOS/sdks"/*; do
+            name=$(basename "$d")
+            if echo "$name" | grep -iEq "15\.[0-9]"; then
+              echo "Found SDK dir: $name"
+              FOUND="$d"
+              if [ "$name" != "iPhoneOS15.5.sdk" ]; then
+                ln -sfn "$d" "$THEOS/sdks/iPhoneOS15.5.sdk"
+                echo "Symlinked: $name -> iPhoneOS15.5.sdk"
+              fi
+              break
+            fi
+          done
+          if [ -z "$FOUND" ]; then
+            echo "WARNING: No iOS 15 SDK installed. Listing what we have:"
+            ls -la "$THEOS/sdks" || true
+            echo "Try to have Theos use whatever latest SDK is available by not pinning a version."
+          fi
+
           echo "=== Installed SDKs ==="
           ls -la "$THEOS/sdks"
 

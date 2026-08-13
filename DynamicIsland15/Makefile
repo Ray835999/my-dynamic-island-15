@@ -1,6 +1,6 @@
 # iPhone 6s + iOS 15.8.8 (palera1n checkm8, rootful)
-# SDK 指向 15.5，部署目标 15.0
-TARGET := iphone:clang:15.5:15.0
+# SDK: 不强求具体文件名，让 Theos 在 $THEOS/sdks 自动选最匹配的 iOS 15 SDK
+TARGET := iphone:clang:latest:15.0
 INSTALL_TARGET_PROCESSES = SpringBoard
 
 ARCHS = arm64 arm64e
