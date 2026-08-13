@@ -12,6 +12,5 @@ TWEAK_NAME = DynamicIsland15
 DynamicIsland15_FILES = Tweak.x DCIslandView.m
 DynamicIsland15_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 DynamicIsland15_FRAMEWORKS = UIKit MediaPlayer CoreTelephony
-DynamicIsland15_PRIVATE_FRAMEWORKS = SpringBoardUI
 
 include $(THEOS_MAKE_PATH)/tweak.mk
