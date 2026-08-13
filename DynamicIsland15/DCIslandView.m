@@ -175,11 +175,20 @@ static const CGFloat kTopInset              = 22.0;
 
 #pragma mark - 音乐监听
 
+// 兼容：不同 SDK 对 MPNowPlayingInfoCenter 通知名的声明有差异，
+// 同时监听它和 MPMusicPlayerController 的通知，并用字符串兜底。
+static NSString *const kDCNowPlayingInfoDidChangeNotification = @"MPNowPlayingInfoCenterNowPlayingInfoDidChangeNotification";
+
 - (void)startObservingMusic {
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(onMusicChanged:)
-                                                 name:MPNowPlayingInfoCenterNowPlayingInfoDidChangeNotification
-                                               object:nil];
+    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+    // 1) 字符串兜底（iOS 15 运行时实际广播的通知名）
+    [nc addObserver:self selector:@selector(onMusicChanged:) name:kDCNowPlayingInfoDidChangeNotification object:nil];
+    // 2) 新版 SDK 保留的 MPMusicPlayerController 通知
+    [nc addObserver:self selector:@selector(onMusicChanged:) name:MPMusicPlayerControllerNowPlayingItemDidChangeNotification object:nil];
+    [nc addObserver:self selector:@selector(onMusicChanged:) name:MPMusicPlayerControllerPlaybackStateDidChangeNotification object:nil];
+    // 让系统音乐播放器激活事件派发（某些设备上需要主动触发）
+    [[MPMusicPlayerController systemMusicPlayer] beginGeneratingPlaybackNotifications];
+
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [self refreshMusicState];
     });
