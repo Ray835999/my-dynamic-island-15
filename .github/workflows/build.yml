@@ -14,20 +14,52 @@ jobs:
 
       - name: Install Theos and SDK
         run: |
-          set -e
+          set -euo pipefail
           # 安装 Theos
           export THEOS=~/theos
-          git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --recursive --depth 1 https://github.com/theos/theos.git $THEOS
           echo "THEOS=$THEOS" >> $GITHUB_ENV
-          # 安装 iOS 15.5 SDK（用于 iOS 15.8.8 兼容）
-          curl -L https://github.com/xybp888/iOS-SDKs/releases/download/1/iOS15.5.sdk.tar.xz -o /tmp/sdk.tar.xz
           mkdir -p $THEOS/sdks
-          tar -xf /tmp/sdk.tar.xz -C $THEOS/sdks
-          ls $THEOS/sdks
-          # 安装 ldid（签名工具）
-          brew install ldid
-          # 安装 dpkg（打包 deb）
-          brew install dpkg
+
+          # 安装 iOS 15.5 SDK：多个候选 URL + 重试，失败就用 Theos 自带 sdk-install.sh 兜底
+          SDK_OUT=/tmp/sdk
+          rm -f $SDK_OUT
+          SDK_URLS=(
+            "https://github.com/xybp888/iOS-SDKs/releases/download/1/iOS15.5.sdk.tar.xz"
+            "https://github.com/xybp888/iOS-SDKs/releases/download/1.0.0/iOS15.5.sdk.tar.xz"
+            "https://raw.githubusercontent.com/xybp888/iOS-SDKs/master/iOS15.5.sdk.tar.xz"
+          )
+          for url in "${SDK_URLS[@]}"; do
+            echo "Trying SDK: $url"
+            if curl --fail --retry 3 --retry-delay 2 -L -o "$SDK_OUT" "$url"; then
+              # 检测实际格式：tar.xz / tar.gz / raw tar
+              file "$SDK_OUT" || true
+              if tar -tf "$SDK_OUT" >/dev/null 2>&1; then
+                echo "Unpacking as plain tar..."
+                tar -xf "$SDK_OUT" -C "$THEOS/sdks" && break
+              elif command -v xz >/dev/null 2>&1 && xz -t "$SDK_OUT" 2>/dev/null; then
+                echo "Unpacking as tar.xz via xz..."
+                xz -dc "$SDK_OUT" | tar -xf - -C "$THEOS/sdks" && break
+              elif tar -tzf "$SDK_OUT" >/dev/null 2>&1; then
+                echo "Unpacking as tar.gz..."
+                tar -xzf "$SDK_OUT" -C "$THEOS/sdks" && break
+              fi
+            fi
+            echo "SDK candidate failed, trying next..."
+            rm -f "$SDK_OUT"
+          done
+
+          # 兜底：用 Theos 官方脚本装 SDK
+          if ! ls "$THEOS/sdks" | grep -qi "iOS15"; then
+            echo "None of direct URLs worked, falling back to Theos sdk-install.sh"
+            bash "$THEOS/bin/sdk-install.sh" 15.5 || bash "$THEOS/bin/sdk.sh" --download 15.5 || true
+          fi
+
+          echo "=== Installed SDKs ==="
+          ls -la "$THEOS/sdks"
+
+          # 安装 ldid（签名工具）和 dpkg（打包 deb）
+          brew install ldid dpkg
 
       - name: Build
         run: |
